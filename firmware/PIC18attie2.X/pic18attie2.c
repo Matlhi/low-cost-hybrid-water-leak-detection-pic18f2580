@@ -154,8 +154,8 @@ static void IO_Init(void);
 static FlowWindowResult Flow_CountWindow(void);
 static uint32_t Acoustic_MeasureEnergy(void);
 static void Acoustic_CaptureSamples(void);
-static int8_t Acoustic_FindBestLag(void);
-static uint16_t Acoustic_PositionFromLag(int8_t lag);
+static int16_t Acoustic_FindBestLag(void);
+static uint16_t Acoustic_PositionFromLag(int16_t lag_q4);
 static uint16_t Acoustic_Locate(uint16_t previous_position_mm);
 static uint16_t AbsDiffU16(uint16_t a, uint16_t b);
 static void Startup(void);
@@ -535,18 +535,20 @@ static void Acoustic_CaptureSamples(void)
     }
 }
 
-static int8_t Acoustic_FindBestLag(void)
+static int16_t Acoustic_FindBestLag(void)
 {
-    int8_t lag;
-    int8_t best_lag = 0;
-    uint8_t i;
+    int8_t   lag;
+    int8_t   best_lag   = 0;
+    uint8_t  i;
     uint32_t best_score = 0u;
+    uint32_t scores[2u * (uint8_t)MAX_LAG + 1u];
 
     for (lag = -(int8_t)MAX_LAG; lag <= (int8_t)MAX_LAG; lag++)
     {
-        int32_t sum = 0;
+        int32_t  sum     = 0;
         uint32_t energyA = 0u;
         uint32_t energyB = 0u;
+        uint32_t score   = 0u;
 
         for (i = 0u; i < SAMPLE_COUNT; i++)
         {
@@ -555,7 +557,7 @@ static int8_t Acoustic_FindBestLag(void)
             {
                 int16_t a = g_micA[i];
                 int16_t b = g_micB[j];
-                sum += (int32_t)a * (int32_t)b;
+                sum     += (int32_t)a * (int32_t)b;
                 energyA += (uint32_t)((int32_t)a * (int32_t)a);
                 energyB += (uint32_t)((int32_t)b * (int32_t)b);
             }
@@ -564,31 +566,45 @@ static int8_t Acoustic_FindBestLag(void)
         if (sum > 0 && energyA > 0u && energyB > 0u)
         {
             uint64_t denominator = ((uint64_t)energyA * (uint64_t)energyB) >> 16;
-            uint32_t score;
-
-            if (denominator == 0u)
-            {
-                denominator = 1u;
-            }
-
+            if (denominator == 0u) { denominator = 1u; }
             score = (uint32_t)(((uint64_t)(uint32_t)sum *
-                                (uint64_t)(uint32_t)sum) /
-                               denominator);
+                                (uint64_t)(uint32_t)sum) / denominator);
 
             if (score > best_score)
             {
                 best_score = score;
-                best_lag = lag;
+                best_lag   = lag;
             }
+        }
+
+        scores[(uint8_t)((int8_t)lag + (int8_t)MAX_LAG)] = score;
+    }
+
+    /* Parabolic interpolation — refines lag to Q4 fixed-point (x16).
+     * Uses the three scores around the integer peak to fit a parabola
+     * and locate the true sub-sample maximum. */
+    if (best_lag > -(int8_t)MAX_LAG && best_lag < (int8_t)MAX_LAG)
+    {
+        uint8_t idx    = (uint8_t)((int8_t)best_lag + (int8_t)MAX_LAG);
+        int32_t y0     = (int32_t)scores[idx - 1u];
+        int32_t y1     = (int32_t)scores[idx];
+        int32_t y2     = (int32_t)scores[idx + 1u];
+        int32_t denom  = y0 - 2L * y1 + y2;  /* always <= 0 at a maximum */
+
+        if (denom != 0L)
+        {
+            /* delta = (y0 - y2) / (2 * denom), scaled x16 = 8*(y0-y2)/denom */
+            int16_t delta_q4 = (int16_t)(8L * (y0 - y2) / denom);
+            return (int16_t)((int16_t)best_lag * 16) + delta_q4;
         }
     }
 
-    return best_lag;
+    return (int16_t)((int16_t)best_lag * 16);
 }
 
-static uint16_t Acoustic_PositionFromLag(int8_t lag)
+static uint16_t Acoustic_PositionFromLag(int16_t lag_q4)
 {
-    int32_t delay_us = (int32_t)lag * SAMPLE_PERIOD_US;
+    int32_t delay_us    = ((int32_t)lag_q4 * SAMPLE_PERIOD_US) / 16L;
     int32_t position_mm = (PIPE_LENGTH_MM * 1000L + SOUND_SPEED_MPS * delay_us) / 2000L;
 
     if (position_mm < 0L)
@@ -608,7 +624,7 @@ static uint16_t Acoustic_Locate(uint16_t previous_position_mm)
     uint8_t run;
     int32_t lag_sum = 0;
     uint8_t valid_runs = 0u;
-    int8_t lag_average;
+    int16_t lag_average;
     uint32_t energy;
 
     for (run = 0u; run < LAG_AVG_COUNT; run++)
@@ -639,13 +655,14 @@ static uint16_t Acoustic_Locate(uint16_t previous_position_mm)
     }
 
     if (lag_sum >= 0)
-        lag_average = (int8_t)((lag_sum + (int32_t)(valid_runs / 2u)) / (int32_t)valid_runs);
+        lag_average = (int16_t)((lag_sum + (int32_t)(valid_runs / 2u)) / (int32_t)valid_runs);
     else
-        lag_average = (int8_t)((lag_sum - (int32_t)(valid_runs / 2u)) / (int32_t)valid_runs);
+        lag_average = (int16_t)((lag_sum - (int32_t)(valid_runs / 2u)) / (int32_t)valid_runs);
 
     UART_PrintTimestamp();
     UART_Print("AVG LAG=");
-    UART_PrintUInt((uint16_t)(lag_average < 0 ? (uint16_t)(-(int16_t)lag_average) : (uint16_t)lag_average));
+    if (lag_average < 0) { UART_Write('-'); UART_PrintUInt((uint16_t)((-lag_average) / 16)); }
+    else                 {                  UART_PrintUInt((uint16_t)(  lag_average   / 16)); }
     UART_Print(" (");
     UART_PrintUInt(valid_runs);
     UART_Print(" valid runs)\r\n");
