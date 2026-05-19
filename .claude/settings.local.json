@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"C:\\\\Program Files\\\\Microchip\\\\xc8\\\\v2.50\\\\pic\\\\include\" 2>/dev/null | head -20)",
+      "Read(//c/Program Files/Microchip/xc8/v2.50/pic/include/**)",
+      "Bash(ls \"C:\\\\Program Files\\\\Microchip\\\\xc8\\\\v2.50\\\\bin\" 2>/dev/null | grep \"xc8\")",
+      "Read(//c/Program Files/Microchip/xc8/v2.50/bin/**)"
+    ]
+  }
+}

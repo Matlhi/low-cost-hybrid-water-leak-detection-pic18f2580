@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "PIC18F2580 (XC8)",
+            "compilerPath": "C:/msys64/ucrt64/bin/gcc.exe",
+            "includePath": [
+                "C:/Program Files/Microchip/xc8/v2.50/pic/include",
+                "C:/Program Files/Microchip/xc8/v2.50/pic/include/proc",
+                "C:/Program Files/Microchip/xc8/v2.50/pic/include/c99",
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "__XC8",
+                "__PICC18__",
+                "__18F2580",
+                "_XTAL_FREQ=20000000UL",
+                "__interrupt(...)=",
+                "__delay_ms(x)=",
+                "__delay_us(x)="
+            ],
+            "cStandard": "c99",
+            "intelliSenseMode": "gcc-x86"
+        }
+    ],
+    "version": 4
+}
