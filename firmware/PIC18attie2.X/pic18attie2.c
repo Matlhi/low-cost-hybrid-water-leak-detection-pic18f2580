@@ -79,7 +79,7 @@
 #define PIPE_LENGTH_MM      1000L
 #define SOUND_SPEED_MPS      338L
 #define INTER_SAMPLE_US      172u
-#define SAMPLE_PERIOD_US     192L
+#define SAMPLE_PERIOD_US     256L   /* 2x ADC_Read (~42us each) + INTER_SAMPLE_US */
 #define LAG_AVG_COUNT          7u
 #define ENERGY_THRESHOLD    2000UL
 #define POSITION_TOL_MM       15u
@@ -492,11 +492,6 @@ static void Acoustic_CaptureSamples(void)
     for (i = 0u; i < SAMPLE_COUNT; i++)
     {
         g_micA[i] = (int16_t)ADC_Read(0u) - 512;
-        __delay_us(INTER_SAMPLE_US);
-    }
-
-    for (i = 0u; i < SAMPLE_COUNT; i++)
-    {
         g_micB[i] = (int16_t)ADC_Read(1u) - 512;
         __delay_us(INTER_SAMPLE_US);
     }
