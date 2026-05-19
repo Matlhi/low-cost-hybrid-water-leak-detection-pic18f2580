@@ -2,6 +2,10 @@
 Project Backups/
 *.bak
 
+# MPLAB generated folders
+build/
+dist/
+
 # Prerequisites
 *.d
 
