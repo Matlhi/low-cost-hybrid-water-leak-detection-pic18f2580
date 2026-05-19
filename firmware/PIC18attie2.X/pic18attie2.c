@@ -28,61 +28,61 @@
 
 #define _XTAL_FREQ 20000000UL
 
-#pragma config OSC    = HS
-#pragma config WDT    = OFF
-#pragma config PWRT   = ON
-#pragma config BOREN  = BOHW
-#pragma config WRT0   = OFF
-#pragma config WRT1   = OFF
-#pragma config WRT2   = OFF
-#pragma config WRT3   = OFF
-#pragma config WRTB   = OFF
-#pragma config WRTC   = OFF
-#pragma config WRTD   = OFF
-#pragma config CP0    = OFF
-#pragma config CP1    = OFF
-#pragma config CP2    = OFF
-#pragma config CP3    = OFF
-#pragma config CPB    = OFF
-#pragma config CPD    = OFF
+#pragma config OSC = HS
+#pragma config WDT = OFF
+#pragma config PWRT = ON
+#pragma config BOREN = BOHW
+#pragma config WRT0 = OFF
+#pragma config WRT1 = OFF
+#pragma config WRT2 = OFF
+#pragma config WRT3 = OFF
+#pragma config WRTB = OFF
+#pragma config WRTC = OFF
+#pragma config WRTD = OFF
+#pragma config CP0 = OFF
+#pragma config CP1 = OFF
+#pragma config CP2 = OFF
+#pragma config CP3 = OFF
+#pragma config CPB = OFF
+#pragma config CPD = OFF
 #pragma config PBADEN = OFF
-#pragma config LVP    = OFF
-#pragma config XINST  = OFF
-#pragma config DEBUG  = OFF
+#pragma config LVP = OFF
+#pragma config XINST = OFF
+#pragma config DEBUG = OFF
 
 /* ------------------------------------------------------------------ */
 /* Pin assignments                                                      */
 /* ------------------------------------------------------------------ */
-#define LCD_RS          LATBbits.LATB2
-#define LCD_EN          LATBbits.LATB3
-#define LCD_D4          LATBbits.LATB4
-#define LCD_D5          LATBbits.LATB5
-#define LCD_D6          LATBbits.LATB6
-#define LCD_D7          LATBbits.LATB7
+#define LCD_RS LATBbits.LATB2
+#define LCD_EN LATBbits.LATB3
+#define LCD_D4 LATBbits.LATB4
+#define LCD_D5 LATBbits.LATB5
+#define LCD_D6 LATBbits.LATB6
+#define LCD_D7 LATBbits.LATB7
 
-#define LED_RED         LATCbits.LATC1
-#define LED_GREEN       LATCbits.LATC2
+#define LED_RED LATCbits.LATC1
+#define LED_GREEN LATCbits.LATC2
 
-#define FLOW1_PIN       PORTBbits.RB0
-#define FLOW2_PIN       PORTBbits.RB1
+#define FLOW1_PIN PORTBbits.RB0
+#define FLOW2_PIN PORTBbits.RB1
 
 /* ------------------------------------------------------------------ */
 /* Tuning constants                                                     */
 /* ------------------------------------------------------------------ */
-#define FLOW_WINDOW_MS         50u
-#define FLOW_DIFF_THRESHOLD     2u
-#define FLOW_CONFIRM_COUNT      3u
-#define FLOW_DEBOUNCE_US       50u
+#define FLOW_WINDOW_MS 50u
+#define FLOW_DIFF_THRESHOLD 2u
+#define FLOW_CONFIRM_COUNT 3u
+#define FLOW_DEBOUNCE_US 50u
 
-#define SAMPLE_COUNT           32u
-#define MAX_LAG                10
-#define PIPE_LENGTH_MM      1000L
-#define SOUND_SPEED_MPS      338L
-#define INTER_SAMPLE_US      172u
-#define SAMPLE_PERIOD_US     256L   /* 2x ADC_Read (~42us each) + INTER_SAMPLE_US */
-#define LAG_AVG_COUNT          7u
-#define ENERGY_THRESHOLD    2000UL
-#define POSITION_TOL_MM       15u
+#define SAMPLE_COUNT 32u
+#define MAX_LAG 10
+#define PIPE_LENGTH_MM 1000L
+#define SOUND_SPEED_MPS 338L
+#define INTER_SAMPLE_US 172u
+#define SAMPLE_PERIOD_US 256L /* 2x ADC_Read (~42us each) + INTER_SAMPLE_US */
+#define LAG_AVG_COUNT 7u
+#define ENERGY_THRESHOLD 2000UL
+#define POSITION_TOL_MM 15u
 
 #define TMR1H_RELOAD 0x0B
 #define TMR1L_RELOAD 0xDC
@@ -90,17 +90,19 @@
 /* ------------------------------------------------------------------ */
 /* State machine                                                        */
 /* ------------------------------------------------------------------ */
-typedef enum {
-    STATE_FLOW_CHECK = 0,   /* Monitoring flow, no confirmed leak      */
-    STATE_LEAK_CONFIRM,     /* Leak detected, accumulating confirmations */
-    STATE_POSITION,         /* Leak confirmed - show position always   */
-    STATE_CLEAR             /* Flow clear confirmed                    */
+typedef enum
+{
+    STATE_FLOW_CHECK = 0, /* Monitoring flow, no confirmed leak      */
+    STATE_LEAK_CONFIRM,   /* Leak detected, accumulating confirmations */
+    STATE_POSITION,       /* Leak confirmed - show position always   */
+    STATE_CLEAR           /* Flow clear confirmed                    */
 } SystemState;
 
 /* ------------------------------------------------------------------ */
 /* Types                                                                */
 /* ------------------------------------------------------------------ */
-typedef struct {
+typedef struct
+{
     uint16_t count1;
     uint16_t count2;
     uint16_t diff;
@@ -113,11 +115,11 @@ static int16_t g_micA[SAMPLE_COUNT];
 static int16_t g_micB[SAMPLE_COUNT];
 
 static volatile uint8_t g_timer1_flag = 0;
-static uint16_t         g_elapsed_sec  = 0;
+static uint16_t g_elapsed_sec = 0;
 
-static SystemState g_state         = STATE_FLOW_CHECK;
-static uint8_t     g_leak_confirm  = 0u;
-static uint8_t     g_clear_confirm = 0u;
+static SystemState g_state = STATE_FLOW_CHECK;
+static uint8_t g_leak_confirm = 0u;
+static uint8_t g_clear_confirm = 0u;
 
 /* Last position successfully displayed */
 static uint16_t g_shown_pos_s1_mm = 0xFFFFu;
@@ -169,7 +171,7 @@ static void Timer1_Init(void)
     PIR1bits.TMR1IF = 0;
     PIE1bits.TMR1IE = 1;
     INTCONbits.PEIE = 1;
-    INTCONbits.GIE  = 1;
+    INTCONbits.GIE = 1;
     T1CONbits.TMR1ON = 1;
 }
 
@@ -191,7 +193,7 @@ static void UART_Init(void)
 {
     TRISCbits.TRISC6 = 0;
     TRISCbits.TRISC7 = 1;
-    SPBRG  = 129;
+    SPBRG = 129;
     TXSTAbits.BRGH = 1;
     TXSTAbits.SYNC = 0;
     TXSTAbits.TXEN = 1;
@@ -201,35 +203,51 @@ static void UART_Init(void)
 
 static void UART_Write(char ch)
 {
-    while (!TXSTAbits.TRMT) { ; }
+    while (!TXSTAbits.TRMT)
+    {
+        ;
+    }
     TXREG = ch;
 }
 
 static void UART_Print(const char *text)
 {
-    while (*text != '\0') { UART_Write(*text++); }
+    while (*text != '\0')
+    {
+        UART_Write(*text++);
+    }
 }
 
 static void UART_PrintUInt2(uint16_t value)
 {
-    if (value > 99u) { value = 99u; }
+    if (value > 99u)
+    {
+        value = 99u;
+    }
     UART_Write((char)('0' + (value / 10u)));
     UART_Write((char)('0' + (value % 10u)));
 }
 
 static void UART_PrintUInt(uint16_t value)
 {
-    char    digits[6];
+    char digits[6];
     uint8_t count = 0u;
 
-    if (value == 0u) { UART_Write('0'); return; }
+    if (value == 0u)
+    {
+        UART_Write('0');
+        return;
+    }
 
     while (value > 0u)
     {
         digits[count++] = (char)('0' + (value % 10u));
         value /= 10u;
     }
-    while (count > 0u) { UART_Write(digits[--count]); }
+    while (count > 0u)
+    {
+        UART_Write(digits[--count]);
+    }
 }
 
 static void UART_PrintTimestamp(void)
@@ -286,7 +304,10 @@ static void LCD_SendChar(uint8_t ch)
 
 static void LCD_Print(const char *text)
 {
-    while (*text != '\0') { LCD_SendChar((uint8_t)*text++); }
+    while (*text != '\0')
+    {
+        LCD_SendChar((uint8_t)*text++);
+    }
 }
 
 static void LCD_SetCursor(uint8_t row, uint8_t col)
@@ -298,8 +319,8 @@ static void LCD_SetCursor(uint8_t row, uint8_t col)
 
 static void LCD_PrintUInt(uint16_t value, uint8_t width)
 {
-    char    digits[6];
-    uint8_t count   = 0u;
+    char digits[6];
+    uint8_t count = 0u;
     uint8_t written = 0u;
 
     if (value == 0u)
@@ -314,10 +335,18 @@ static void LCD_PrintUInt(uint16_t value, uint8_t width)
             digits[count++] = (char)('0' + (value % 10u));
             value /= 10u;
         }
-        while (count > 0u) { LCD_SendChar((uint8_t)digits[--count]); written++; }
+        while (count > 0u)
+        {
+            LCD_SendChar((uint8_t)digits[--count]);
+            written++;
+        }
     }
 
-    while (written < width) { LCD_SendChar(' '); written++; }
+    while (written < width)
+    {
+        LCD_SendChar(' ');
+        written++;
+    }
 }
 
 static void LCD_Init(void)
@@ -379,10 +408,13 @@ static void ADC_Init(void)
 
 static uint16_t ADC_Read(uint8_t channel)
 {
-    ADCON0bits.CHS     = channel;
+    ADCON0bits.CHS = channel;
     __delay_us(25);
     ADCON0bits.GO_DONE = 1;
-    while (ADCON0bits.GO_DONE) { ; }
+    while (ADCON0bits.GO_DONE)
+    {
+        ;
+    }
     return (((uint16_t)ADRESH) << 8) | ADRESL;
 }
 
@@ -407,7 +439,7 @@ static void IO_Init(void)
 
     INTCON2bits.RBPU = 1;
 
-    LED_RED   = 0;
+    LED_RED = 0;
     LED_GREEN = 0;
 }
 
@@ -417,12 +449,12 @@ static void IO_Init(void)
 static FlowWindowResult Flow_CountWindow(void)
 {
     FlowWindowResult result;
-    uint8_t  previous1, previous2, current1, current2;
+    uint8_t previous1, previous2, current1, current2;
     uint16_t ms, tick;
 
     result.count1 = 0u;
     result.count2 = 0u;
-    result.diff   = 0u;
+    result.diff = 0u;
 
     previous1 = FLOW1_PIN;
     previous2 = FLOW2_PIN;
@@ -440,7 +472,10 @@ static FlowWindowResult Flow_CountWindow(void)
                 __delay_us(FLOW_DEBOUNCE_US);
                 previous1 = FLOW1_PIN;
             }
-            else { previous1 = current1; }
+            else
+            {
+                previous1 = current1;
+            }
 
             if (current2 && !previous2)
             {
@@ -448,15 +483,18 @@ static FlowWindowResult Flow_CountWindow(void)
                 __delay_us(FLOW_DEBOUNCE_US);
                 previous2 = FLOW2_PIN;
             }
-            else { previous2 = current2; }
+            else
+            {
+                previous2 = current2;
+            }
 
             __delay_us(10);
         }
     }
 
     result.diff = (result.count1 > result.count2)
-                ? (uint16_t)(result.count1 - result.count2)
-                : (uint16_t)(result.count2 - result.count1);
+                      ? (uint16_t)(result.count1 - result.count2)
+                      : (uint16_t)(result.count2 - result.count1);
 
     return result;
 }
@@ -466,17 +504,17 @@ static FlowWindowResult Flow_CountWindow(void)
 /* ------------------------------------------------------------------ */
 static uint32_t Acoustic_MeasureEnergy(void)
 {
-    uint8_t  i;
-    int16_t  sample;
+    uint8_t i;
+    int16_t sample;
     uint32_t energyA = 0u;
     uint32_t energyB = 0u;
 
     for (i = 0u; i < 16u; i++)
     {
-        sample   = (int16_t)ADC_Read(0u) - 512;
+        sample = (int16_t)ADC_Read(0u) - 512;
         energyA += (uint32_t)((int32_t)sample * (int32_t)sample);
 
-        sample   = (int16_t)ADC_Read(1u) - 512;
+        sample = (int16_t)ADC_Read(1u) - 512;
         energyB += (uint32_t)((int32_t)sample * (int32_t)sample);
 
         __delay_us(50);
@@ -499,14 +537,14 @@ static void Acoustic_CaptureSamples(void)
 
 static int8_t Acoustic_FindBestLag(void)
 {
-    int8_t   lag;
-    int8_t   best_lag   = 0;
-    uint8_t  i;
+    int8_t lag;
+    int8_t best_lag = 0;
+    uint8_t i;
     uint32_t best_score = 0u;
 
     for (lag = -(int8_t)MAX_LAG; lag <= (int8_t)MAX_LAG; lag++)
     {
-        int32_t  sum     = 0;
+        int32_t sum = 0;
         uint32_t energyA = 0u;
         uint32_t energyB = 0u;
 
@@ -517,7 +555,7 @@ static int8_t Acoustic_FindBestLag(void)
             {
                 int16_t a = g_micA[i];
                 int16_t b = g_micB[j];
-                sum     += (int32_t)a * (int32_t)b;
+                sum += (int32_t)a * (int32_t)b;
                 energyA += (uint32_t)((int32_t)a * (int32_t)a);
                 energyB += (uint32_t)((int32_t)b * (int32_t)b);
             }
@@ -528,15 +566,19 @@ static int8_t Acoustic_FindBestLag(void)
             uint64_t denominator = ((uint64_t)energyA * (uint64_t)energyB) >> 16;
             uint32_t score;
 
-            if (denominator == 0u) { denominator = 1u; }
+            if (denominator == 0u)
+            {
+                denominator = 1u;
+            }
 
             score = (uint32_t)(((uint64_t)(uint32_t)sum *
-                                (uint64_t)(uint32_t)sum) / denominator);
+                                (uint64_t)(uint32_t)sum) /
+                               denominator);
 
             if (score > best_score)
             {
                 best_score = score;
-                best_lag   = lag;
+                best_lag = lag;
             }
         }
     }
@@ -546,21 +588,27 @@ static int8_t Acoustic_FindBestLag(void)
 
 static uint16_t Acoustic_PositionFromLag(int8_t lag)
 {
-    int32_t delay_us    = (int32_t)lag * SAMPLE_PERIOD_US;
+    int32_t delay_us = (int32_t)lag * SAMPLE_PERIOD_US;
     int32_t position_mm = (PIPE_LENGTH_MM * 1000L + SOUND_SPEED_MPS * delay_us) / 2000L;
 
-    if      (position_mm < 0L)             { position_mm = 0L; }
-    else if (position_mm > PIPE_LENGTH_MM) { position_mm = PIPE_LENGTH_MM; }
+    if (position_mm < 0L)
+    {
+        position_mm = 0L;
+    }
+    else if (position_mm > PIPE_LENGTH_MM)
+    {
+        position_mm = PIPE_LENGTH_MM;
+    }
 
     return (uint16_t)position_mm;
 }
 
 static uint16_t Acoustic_Locate(uint16_t previous_position_mm)
 {
-    uint8_t  run;
-    int32_t  lag_sum    = 0;
-    uint8_t  valid_runs = 0u;
-    int8_t   lag_average;
+    uint8_t run;
+    int32_t lag_sum = 0;
+    uint8_t valid_runs = 0u;
+    int8_t lag_average;
     uint32_t energy;
 
     for (run = 0u; run < LAG_AVG_COUNT; run++)
@@ -641,8 +689,10 @@ static void Startup(void)
 
     for (i = 0u; i < 3u; i++)
     {
-        LED_GREEN = 1; __delay_ms(120);
-        LED_GREEN = 0; __delay_ms(120);
+        LED_GREEN = 1;
+        __delay_ms(120);
+        LED_GREEN = 0;
+        __delay_ms(120);
     }
 
     LCD_SetCursor(0, 0);
@@ -663,8 +713,8 @@ static void Startup(void)
 void main(void)
 {
     FlowWindowResult flow;
-    uint16_t         new_pos_s1_mm;
-    uint16_t         new_pos_s2_mm;
+    uint16_t new_pos_s1_mm;
+    uint16_t new_pos_s2_mm;
 
     /*
      * g_shown_pos_s1_mm holds the last position written to the LCD.
@@ -691,7 +741,10 @@ void main(void)
         {
             g_timer1_flag = 0;
             g_elapsed_sec++;
-            if (g_elapsed_sec >= 6000u) { g_elapsed_sec = 0u; }
+            if (g_elapsed_sec >= 6000u)
+            {
+                g_elapsed_sec = 0u;
+            }
         }
 
         /* ---------------------------------------------------------- */
@@ -729,12 +782,12 @@ void main(void)
             if (g_clear_confirm >= FLOW_CONFIRM_COUNT)
             {
                 LED_GREEN = 1;
-                LED_RED   = 0;
+                LED_RED = 0;
 
                 if (g_state != STATE_CLEAR)
                 {
-                    g_state            = STATE_CLEAR;
-                    g_shown_pos_s1_mm  = 500u;   /* Reset fallback position */
+                    g_state = STATE_CLEAR;
+                    g_shown_pos_s1_mm = 500u; /* Reset fallback position */
                     LCD_ShowNoLeak();
                     UART_Log("*** SYSTEM CLEAR - NO ACTIVE LEAK ***");
                 }
@@ -744,7 +797,7 @@ void main(void)
         {
             /* ---- Flow imbalance detected ---- */
             g_clear_confirm = 0u;
-            LED_RED   = 1;
+            LED_RED = 1;
             LED_GREEN = 0;
 
             if (g_leak_confirm < FLOW_CONFIRM_COUNT)
@@ -774,7 +827,7 @@ void main(void)
                 if (g_state != STATE_LEAK_CONFIRM)
                 {
                     g_state = STATE_LEAK_CONFIRM;
-                    LCD_ShowLeakFound();   /* Only brief - next cycle runs location */
+                    LCD_ShowLeakFound(); /* Only brief - next cycle runs location */
                 }
             }
             else
@@ -806,7 +859,7 @@ void main(void)
                      * First confirmed location reading - always show it
                      * and transition to STATE_POSITION.
                      */
-                    g_state           = STATE_POSITION;
+                    g_state = STATE_POSITION;
                     g_shown_pos_s1_mm = new_pos_s1_mm;
                     LCD_ShowPosition(new_pos_s1_mm, new_pos_s2_mm);
 
