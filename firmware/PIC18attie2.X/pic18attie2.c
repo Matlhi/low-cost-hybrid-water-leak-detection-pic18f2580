@@ -79,7 +79,8 @@
 #define PIPE_LENGTH_MM 1000L
 #define SOUND_SPEED_MPS 338L
 #define INTER_SAMPLE_US 172u
-#define SAMPLE_PERIOD_US 256L /* 2x ADC_Read (~42us each) + INTER_SAMPLE_US */
+#define SAMPLE_PERIOD_US     291L  /* calibrated: 2x ADC_Read + INTER_SAMPLE_US */
+#define ADC_INTER_CH_BIAS_US  40L  /* AN1 sampled ~40us after AN0 in each iteration */
 #define LAG_AVG_COUNT 7u
 #define ENERGY_THRESHOLD 2000UL
 #define POSITION_TOL_MM 15u
@@ -380,12 +381,12 @@ static void LCD_ShowPosition(uint16_t s1_mm, uint16_t s2_mm)
     LCD_SetCursor(0, 0);
     LCD_Print("S1:");
     LCD_PrintUInt(s1_mm, 4);
-    LCD_Print("mm      ");
+    LCD_Print("mm       ");
 
     LCD_SetCursor(1, 0);
     LCD_Print("S2:");
     LCD_PrintUInt(s2_mm, 4);
-    LCD_Print("mm      ");
+    LCD_Print("mm       ");
 }
 
 static void LCD_ShowNoLeak(void)
@@ -580,7 +581,7 @@ static int16_t Acoustic_FindBestLag(void)
         scores[(uint8_t)((int8_t)lag + (int8_t)MAX_LAG)] = score;
     }
 
-    /* Parabolic interpolation — refines lag to Q4 fixed-point (x16).
+    /* Parabolic interpolation ? refines lag to Q4 fixed-point (x16).
      * Uses the three scores around the integer peak to fit a parabola
      * and locate the true sub-sample maximum. */
     if (best_lag > -(int8_t)MAX_LAG && best_lag < (int8_t)MAX_LAG)
@@ -604,7 +605,7 @@ static int16_t Acoustic_FindBestLag(void)
 
 static uint16_t Acoustic_PositionFromLag(int16_t lag_q4)
 {
-    int32_t delay_us    = ((int32_t)lag_q4 * SAMPLE_PERIOD_US) / 16L;
+    int32_t delay_us    = ((int32_t)lag_q4 * SAMPLE_PERIOD_US) / 16L + ADC_INTER_CH_BIAS_US;
     int32_t position_mm = (PIPE_LENGTH_MM * 1000L + SOUND_SPEED_MPS * delay_us) / 2000L;
 
     if (position_mm < 0L)
@@ -689,10 +690,10 @@ static void Startup(void)
 
     UART_Print("\r\n==============================\r\n");
     UART_Print("  AQUADETECTION v7.3\r\n");
-    UART_Print("  Flow : RB0/RB1 + 4.7k pull-ups\r\n");
+    UART_Print("  Flow : RB0/RB1 + 10k pull-ups\r\n");
     UART_Print("  Mic  : AN0/AN1 (split capture)\r\n");
     UART_Print("  Xcorr: energy-normalised, N=32, MAX_LAG=10\r\n");
-    UART_Print("  Pos  : calibrated, T=192us, v=338m/s\r\n");
+    UART_Print("  Pos  : calibrated, T=291us, v=338m/s\r\n");
     UART_Print("  MODE : Position always on LCD; localise in bg\r\n");
     UART_Print("==============================\r\n\r\n");
     __delay_ms(1500);
